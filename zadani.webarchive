@@ -1,0 +1,167 @@
+bplist00�_WebMainResource�	
+_WebResourceData_WebResourceMIMEType_WebResourceTextEncodingName_WebResourceFrameName^WebResourceURLO3(<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/2000/REC-xhtml1-20000126/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="cs" lang="cs"><head>
+    <meta name="generator" content="PSPad editor, www.pspad.com">
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"><title>A4B33OSS: Zadání semstrálních prací: Sítě</title>
+	 <style type="text/css">
+		 code {background-color:#ddd; display:block; padding:10px;}
+		 table.packet {background-color:black; margin: 5px;}
+		 table.packet td {background-color: #DDD; color:black; padding:3px 10px 3px 10px;}
+	 </style>
+    <style>
+      @import 'style.css';
+	</style>
+	</head>
+	<body>
+    <h1>Semestrální práce z předmětu A4B33OSS</h1>
+
+<p>
+Cílem této práce je zkusit si některé způsoby implementace algoritmů z oblasti sítí. Při vytváření programů, které komunikují pomocí externího spojení je vždy velký důraz kladen na schopnost
+detekce chyby a řešení nastalé situace. 
+</p>
+
+    <p>První dvě úlohy jsou zaměřené na implementaci algoritmů protokolového zásobníku. Použití protokolového zásobníku má velmi užitečnou vlastnost: každá vrstva má na starosti jednoduchou
+    dobře definovanou úlohu a může se spolehnout na korektní řešení problémů ostatními vrstvami.<br>
+    Druhé dvě úlohy se zaměřují na směrování zpráv s sítích. První je spíše zaměřena na synchronizaci procesů případně vláken, druhá je zaměřena na směrování v síti, jejíž topologie se může měnit.
+    </p>
+    <p>
+    Pro implementaci vytvořte skupiny 2 studnetů. Váš program by měl být přehledný, dobře komentovaný a samozřejmě funkční. Pokud je to u úlohy vyžadováno, musí umět Váš program simulovat
+    některé chyby síťového spojení.
+ </p>
+    <p>Až si vyberete, pošlete svému cvičícímu mail, kde bude uvedeno, na jaký
+předmět a kdy chodíte, vámi utvořená skupina (tj. dvě jména) a <strong>seznam</strong>
+dvou úloh, které byste rádi řešili. Pokud má některá úloha variantu pošlete i jaký písmeno specifikující variantu úlohy.</p>
+<p>
+  Studenti, kteří mail cvičícímu nepošlou, si vyberou na cvičení z volných témat, případně jim bude téma přiřazeno.
+</p>
+<p>
+Všechny programy vypisují ladicí výpisy na chybový výstup. Na chybový výstup se také zobrazují všechny informace o událostech v běhu programu (jako je rozpojení spojení, routovací informace,
+informace o chybách v přiajatých telegramech).
+</p>
+<p>
+Všechny programy jsou založené na standardu POSIX zkompilovatelným pro UNIXový systém.
+</p>
+
+    <h2 id="u2">1. Navazované spojení</h2>
+    <p>Implementujte potvrzované spojení splňující následující protokolový stack. Jedná se o příklad zajištěné komunikace, kdy klient a server si pravidelně vyměňují data o svém stavu.
+    Realace se zkládá z fáze navazování spojení, kdy může docházet i k ověřování identity komunikojících stran. Navazování spojení se vždy děje tak, že klient žádá o spojení a server vyčkává na spojení od klienta.
+    Pro spojení se využije soket typu stream.
+    </p><table border="1">
+<tbody><tr><td>Datová vrstva</td><td>Datová vrstva použije pro spojenení sokety. Po soketech se budou vysílat pouze znaky '0'-'9' a 'a'-'f' a znak ','. Každý bajt, který má být vyslán bude převeden do trojice znaků reprezentujících jeho hex
+  hodnotu a znak ','. Začátek a konec telegramu určují dva znaky ',' vyslané bezprostředně za sebou.
+  <br>
+  Příklad vyslání telegramu o 6-ti bajtech a hodnotách 0x04, 0x0d, 0x55, 0x32, 0x32, 0x58:  <br>
+       <code>,,04,0d,55,32,32,58,,</code></td></tr>
+       <tr><td>Transportní vrstva</td><td>Transportní vrstva přídá na začátek vysílaného telegramu dva bajty: délku dat bez hlavičky a kontrolní součet. Kontrolní součet se vypočte jako bitový XOR všech hodnot zasílaného telegramu. 
+       Při příjmu telegramu se tento kontrolní součet otestuje a relační vrstvě se předají pouze telegramy se správným kontrolním součtem</td></tr>
+       <tr><td>Relační vrstva</td><td>Relační vrstva navazuje spojení a kontroluje výpadek zpráv. Pro navázání relace spojení slouží telegram t0 následujícího formátu:
+  <br>
+  <strong>t0</strong> : <table class="packet"><tbody><tr><td>0x10</td><td>sekv_a_low</td><td>sekv_a_high</td><td>8 bajtů jména</td><td>0x11</td></tr></tbody></table>
+         <br>
+Klient i server si při spuštění vygenerují náhodnou hodnotu počáteční sekvenční značky. Klient pošle telegram t0 se svojí sekvenční 
+       značkou, server odpoví telegramem t0 se svojí sekvenční značkou. Pro další komunikaci se použije sekvenční značka součtu obou těchto značek. Pro přenos zpráv se použije telegram t1, který má
+       formát:  <br>
+		 <strong>t1</strong> : <table class="packet"><tbody><tr><td>0x20</td><td>sekv_a_low</td><td>sekv_a_high</td><td>32 bajtů zprávy</td><td>0x21</td></tr></tbody></table>
+	   <br>
+       Po vyslání telegramu je vždy sekvenční značka inkrementována. Při příjmu chybné sekvenční značky, nebo při příjmu telegramu T0 je relace zrušena (to znamená, že je potřeba, aby došlo k výměně 2 telegramů T0 s novými aktuálními
+       sekvenčními značkami - socket se neuzavírá ten je součástí datové vrstvy). 
+       Klient relaci zruší pokud server neodpoví do vyslání následujícího telegramu. 
+  <br>
+       Příklad navázání spojení:
+       <code><table border="1">
+		 <tbody><tr><td><b>Klient</b></td><td><b>Server</b></td></tr>
+<tr><td>0x10 | 0x88 | 0x55 | K | L | I | E | N | T | 0 | 0 | 0x11 </td><td>0x10 | 0x10 | 0x00 | S | E | R | V | E | R | 5 | 5 | 0x11</td></tr>
+<tr><td>0x20 | 0x99 | 0x55 | Z | P | R | A | V | A | 1 | 0x21 </td><td>0x20 | 0x99 | 0x55 | Z | P | R | A | V | A | 3 | 0x21</td></tr>
+<tr><td>0x20 | 0x9A | 0x55 | Z | P | R | A | V | A | 2 | 0x21 </td><td>0x20 | 0x9A | 0x55 | Z | P | R | A | V | A | 3 | 0x21</td></tr>
+<tr><td>0x20 | 0x9B | 0x55 | Z | P | R | A | V | A | 2 | 0x21 </td><td>0x20 | 0x9B | 0x55 | Z | P | R | A | V | A | 3 | 0x21</td></tr>
+</tbody></table> 
+       </code>
+       </td></tr>
+		 <tr><td>Aplikační vrstva</td><td>Uživatel posílá a příjímá telegramy o maximální délce 32 bajtů. Klient zasílá telegramy v intervalu 1 sekunda, server odpovídá pouze na přijatý telegram.<br>
+       Server může odpovědět pouze má-li k dispozici vstupní data. Pokud uživatel data nezadal, nemá server oprávnění k navázání spojení.</td></tr>
+</tbody></table>
+    <p></p>
+<p>
+Klient čte data ze standardního vstupu oddělená znakem <em>nový_řádek</em> (EOL = 0x0A) a zadaná data vysílá pravidelně každou vteřinu (za předpokladu že nečeká na vstup).
+Server čte data stejným způsobem a data posílá jako odpověď na telegram od klienta. Je zřejmé, že server čeká na 2 typy událostí (standartní vstup a socket), proto vyžaduje implementaci s minimálně dvěmi vlákny (nebo použití funkce <em>select</em>).
+<br><br>
+Klient i server musí být odolní na chybu ve spojení, tady musí se správně zachovat při chybě kontrolního součtu, při chybě datové vrstvy a při chybě relační vrstvy. Telegram s chybou je zahozen. V tomto případě se nejedná o potvrzované spojení, takže zahozená data se již opakovaně nevysílají.
+<br><br>
+  Klient se spouští s 3 parametry: IP_serveru, port_serveru, jmeno. 
+  <br>
+  Server se spouští s 2 parametry: port_serveru, jmeno. 
+</p>
+
+    <h2 id="u2">2. Potvrzované spojení</h2>
+    <p>Implementujte potvrzované spojení využívající následující algoritmus:
+    </p><table>
+<tbody><tr><td>a) <a href="http://en.wikipedia.org/wiki/Go-Back-N_ARQ">Go Back N ARQ</a></td><td>Implementujte algoritmus Go back N pro N=8. </td></tr>
+       <tr><td>b) <a href="http://en.wikipedia.org/wiki/Selective_Repeat_ARQ">Selective Repeat ARQ</a></td><td>Implementujte algoritmus selective repeat pro N=8. </td></tr>
+</tbody></table>
+    <p></p>
+<p>
+Program klient na začátku otevře soketové připojení podle zadaných argumentů (IP a číslo portu) a dále vysílá zprávy, které si přečte ze standardního vstupu (zprávy jsou odděleny znakem <em>Nová_řádka</em> (EOL = 0x10) a jsou ořezány, nebo doplněny na pevnou délku). 
+Při EOF ukončí soketové spojení.<br>
+Klient před každou zprávu přidá hlavičku, která bude obsahovat dva bajty sekvenčního čísla. Pro posílání zpráv využijte soketu typu Datagram (UDP). Všechny posílané zprávy budou mít pevnou délku.
+Program klient podle generátoru náhodných čísel buď zprávu s pravděpodobností 0.9 odešle, nebo bude s pravděpodobností 0.1 simulovat výpadek telegramu (tedy neodešle žádný bajt zprávy).
+<br>
+Program server přijímá telegramy a vysílá potvrzení o jejich přijetí. Server také podle generátoru náhodných čísel s pravděpodobností 0.9 zašle potvrzení a s pravděpodobností 0.1 potvrzení zahodí.
+Server na standardní výstup zobrazuje přijaté zprávy.
+<br><br>
+  Klient se spouští s 2 parametry: IP_serveru, port_serveru. 
+  <br>
+  Server se spouští s 1 parametrem: port_serveru. 
+</p>
+    
+
+ <h2 id="u2">3. Klient - server</h2>
+    <p>V této úloze máte za úkol naprogramovat dva samostatné programy klient a server.
+Při startu se klient podle zadaných údajů přihlásí na server. <br>
+Jako první zašle řetězec zakončený 0 o maximální délce 16 znaků. Tento řetězec představuje jméno pod kterým se klient přihlašuje k serveru.
+Následně klient zasílá maximálně 256 znakové zprávy jiným klientům podle jména.
+Zprávy jsou čteny ze standardního vstupu ve tvaru <code>jmeno:zpráva</code> (ukončené znakem <em>Nová_řádka</em>).
+Načtené zprávy jsou ihned odesílány na server.
+<br>
+Server zprávy přeposílá přihlášeným klientům.
+Pokud je zpráva určena pro klienta, který ještě nikdy nebyl přihlášen, nebo který není dostupný, server zprávu uloží. 
+Server si pro každého klienta pamatuje maximálně 16 posledních zpráv.
+Maximální počet různých klientů, kteří se mohou přihlásit je 256.
+Server musí umožnit současné přihlášení až 32 klientů.
+<br>
+Pokud se Klient přihlásí, jsou mu automaticky zaslány všechny uložené zprávy.
+Při ukončení klienta je nutné poslat serveru zprávu oznamující odpojení klienta.
+<br>
+Pro komunikaci použijte soket typu Datagram (UDP).
+Strukturu komunikačních datagramů si navrhněte sami.
+</p>
+<p>
+Klient se spouští s 3 parametry: IP_serveru, port_serveru, jmeno. 
+<br>
+Server se spouští s 1 parametrem: port_serveru. 
+</p>
+
+<h2 id="u2">4. Dynamické směrování</h2>
+    <p>V této úloze máte za úkol naprogramovat jeden program, který se chová jako klient i server současně. Program si při spuštění přečte svůj konfigurační soubor který má následující strukturu:
+       </p><table border="1">
+<tbody><tr><td>1. řádka</td><td>obsahuje ID programu, kterým se bude hlásit v síti</td></tr>
+<tr><td>2. řádka</td><td>obsahuje číslo protu, kde bude očekávat připojení klientů</td></tr>
+<tr><td>3. řádka</td><td>obsahuje počet spojení, které program naváže jako klient (toto číslo je nejvýše 4)</td></tr>
+<tr><td>4.-N. řádka</td><td>obsahuje IP adresu a port pro navázání spojení k serveru</td></tr>
+</tbody></table>
+    <br>
+    Každý program umožní maximálně 4 připojení jako server a 4 připojení jako klient. Všechna navázaná spojení jsou obousměrná a tváří se jako propojení Ethernetovým spojením.
+Program využívá některý ze známých algoritmů <a href="http://en.wikipedia.org/wiki/Routing">směrování</a>, nebo Váš vlastní přístup. Program čte ze standardního vstupu zprávy ve formátu 
+<code>ID_Adresáta:zpráva</code>, kde zpráva obsahuje maximálně 128 bajtů, delší zpráva je oříznuta.
+V komunikaci mezi programy můžete použít telegramy delších délek (bude třeba si k telegramu přidávat informace o cestě telegramu).
+Pro komunikaci použijte soket typu Datagram (UDP).
+<br>
+Všechny ID v systému jsou jednobajtová čísla v rozsahu 1..255. Číslo 0 je rezervováno pro testování spojení a výměnu směrovacích informací.
+<br>
+Systém by měl doručit zprávu alespoň jednou (rozhodně nikdy ne dvakrát, i když zprávu může rozdvojit a poslat více cestami).
+Zprávy které nelze doručit se zahodí.
+Rovněž je povoleno zahodit zprávy, které se nevejdou do buferu programu (pokud bude v systému jen jedna zpráva a bude existovat cesta, pak ji musí doručit).
+<br>
+Pokud bude Váš systém schopen oznámit nedoručitelnost zprávy, pak jsou to kladné body, které mohou vyvážit čitelnost programu. Rozhodně musíte být schopni vysvětlit při předávání mechanismus, který detekuje nedoručitelnost.
+<p></p>
+
+ 
+</body></html>Ytext/htmlUUTF-8T_new_?http://labe.felk.cvut.cz/~stepan/33OSS/semestralky-network.html    ( : P n � �3�3�3�3�                           4
