@@ -24,33 +24,30 @@ unsigned client_len;
 struct sockaddr_in server_address;
 struct sockaddr_in client_address;
 
-void * service(void *nothing) {
-	char tmp[256];
-	char name[16];
-	char message[256];
+void * service(int sock, int nmOfTh) {
+	char tmp[257];
+	char name[17];
+	char message[257];
 	int sending = 1;
+	int client_sfd = sock;
+	int nmOfThread = nmOfTh;
 
 	//receiving client's name
-	recv(client_sockfd, &tmp, 16, 0);
-	if (tmp[strlen(tmp) - 1] == '0') {
-		int i = 0;
-		while (tmp[i] != '0') {
-			name[i] = tmp[i];
-			i++;
-		}
-		printf("Received client's name: ");
-		for (i = 0; i < strlen(name); i++) {
-			printf("%c", name[i]);
-		}
-		printf("\n");
-	} else {
-		printf("Client's name was sended in wrong format!");
+	recv(client_sfd, &tmp, 16, 0);
+	int i = 0;
+	for (i = 0; i < strlen(tmp); i++) {
+		name[i] = tmp[i];
 	}
+	printf("Received client's name: ");
+	for (i = 0; i < strlen(name); i++) {
+		printf("%c", name[i]);
+	}
+	printf("\n");
 
 	//receiving messages
 	while (message[0] != '@' && message[1] != 'e' && message[2] != 'x'
 			&& message[3] != 'i' && message[4] != 't' && message[5] != '@') {
-		recv(client_sockfd, &message, 256, 0);
+		recv(client_sfd, &message, 256, 0);
 		//close(client_sockfd);
 		int doubledot = 0;
 		int i = 0;
@@ -105,7 +102,7 @@ int main(int argc, char *argv[]) {
 		client_sockfd = accept(server_sockfd,
 				(struct sockaddr *) &client_address, &client_len);
 		printf("client connected = %d\n", client_sockfd);
-		pthread_create(&threads[numberOfThreads], NULL, service, NULL); //Create thread
+		pthread_create(&threads[numberOfThreads], NULL, service(client_sockfd, numberOfThreads), NULL); //Create thread
 		numberOfThreads++;
 	}
 	printf("Server exiting\n");
